@@ -1,0 +1,1872 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, DollarSign, User, Music, Plus, Save, X, Bell, BellRing } from 'lucide-react';
+
+const MobileMusicAcademyApp = () => {
+  const [selectedStudent, setSelectedStudent] = useState(0);
+  const [currentView, setCurrentView] = useState('calendar');
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showEditClass, setShowEditClass] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [showAddClass, setShowAddClass] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [newClass, setNewClass] = useState({
+    lesson: '',
+    instructor: 'Ms. Rodriguez',
+    date: new Date().toISOString().split('T')[0],
+    time: '15:00',
+    duration: '60 min',
+    status: 'upcoming',
+    notes: ''
+  });
+  const [showStudentHistory, setShowStudentHistory] = useState(false);
+  const [studentHistory, setStudentHistory] = useState([]);
+  const [paymentData, setPaymentData] = useState({
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardholderName: '',
+    billingAddress: '',
+    city: '',
+    zipCode: ''
+  });
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  
+  const initialStudents = [
+    {
+      id: 1,
+      name: "Emma Johnson",
+      instrument: "Piano",
+      level: "Intermediate",
+      photo: "🎹",
+      parentName: "Sarah Johnson",
+      parentPhone: "(555) 123-4567",
+      parentEmail: "sarah.johnson@email.com",
+      studentPhone: "(555) 123-4568",
+      address: "123 Oak Street",
+      city: "Springfield",
+      zipCode: "12345",
+      emergencyContact: "John Johnson (Father)",
+      emergencyPhone: "(555) 123-4569",
+      dateOfBirth: "2010-05-15",
+      medicalNotes: "No known allergies",
+      startDate: "2024-01-15"
+    },
+    {
+      id: 2,
+      name: "Lucas Smith",
+      instrument: "Guitar",
+      level: "Beginner",
+      photo: "🎸",
+      parentName: "Mike Smith",
+      parentPhone: "(555) 987-6543",
+      parentEmail: "mike.smith@email.com",
+      studentPhone: "",
+      address: "456 Pine Avenue",
+      city: "Springfield",
+      zipCode: "12346",
+      emergencyContact: "Lisa Smith (Mother)",
+      emergencyPhone: "(555) 987-6544",
+      dateOfBirth: "2012-08-22",
+      medicalNotes: "",
+      startDate: "2024-03-01"
+    }
+  ];
+
+  const [students, setStudents] = useState(initialStudents);
+
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: 'lesson_reminder',
+      title: 'Lesson Reminder',
+      message: 'Emma has a piano lesson tomorrow at 3:00 PM with Ms. Rodriguez',
+      studentId: 1,
+      timestamp: new Date().toISOString(),
+      read: false,
+      icon: '🎹'
+    },
+    {
+      id: 2,
+      type: 'payment_due',
+      title: 'Payment Due Soon',
+      message: 'June piano lesson payment ($120) is due in 3 days',
+      studentId: 1,
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      read: false,
+      icon: '💳'
+    }
+  ]);
+
+  const [newStudent, setNewStudent] = useState({
+    name: '',
+    instrument: '',
+    level: 'Beginner',
+    parentName: '',
+    parentPhone: '',
+    parentEmail: '',
+    studentPhone: '',
+    address: '',
+    city: '',
+    zipCode: '',
+    emergencyContact: '',
+    emergencyPhone: '',
+    dateOfBirth: '',
+    medicalNotes: '',
+    startDate: new Date().toISOString().split('T')[0]
+  });
+
+  const [classes, setClasses] = useState([
+    {
+      id: 1,
+      studentId: 1,
+      date: "2025-06-20",
+      time: "3:00 PM",
+      duration: "60 min",
+      status: "upcoming",
+      lesson: "Scales and Arpeggios",
+      instructor: "Ms. Rodriguez"
+    },
+    {
+      id: 2,
+      studentId: 1,
+      date: "2025-06-17",
+      time: "3:00 PM",
+      duration: "60 min",
+      status: "completed",
+      lesson: "Chopin Waltz Practice",
+      instructor: "Ms. Rodriguez",
+      notes: "Great progress on timing"
+    },
+    {
+      id: 3,
+      studentId: 2,
+      date: "2025-06-25",
+      time: "4:00 PM",
+      duration: "45 min",
+      status: "upcoming",
+      lesson: "Strumming Patterns",
+      instructor: "Mr. Thompson"
+    }
+  ]);
+
+  const [payments, setPayments] = useState([
+    {
+      id: 1,
+      studentId: 1,
+      amount: 120,
+      dueDate: "2025-06-30",
+      status: "pending",
+      description: "Monthly Piano Lessons - June"
+    },
+    {
+      id: 2,
+      studentId: 1,
+      amount: 120,
+      dueDate: "2025-05-31",
+      status: "paid",
+      description: "Monthly Piano Lessons - May",
+      paidDate: "2025-05-28"
+    },
+    {
+      id: 3,
+      studentId: 2,
+      amount: 100,
+      dueDate: "2025-06-30",
+      status: "pending",
+      description: "Monthly Guitar Lessons - June"
+    }
+  ]);
+
+  const instrumentEmojis = {
+    'Piano': '🎹',
+    'Guitar': '🎸',
+    'Violin': '🎻',
+    'Drums': '🥁',
+    'Flute': '🪈',
+    'Saxophone': '🎷',
+    'Trumpet': '🎺',
+    'Voice': '🎤'
+  };
+
+  // Calculated values
+  const currentStudent = students[selectedStudent] || students[0];
+  const studentClasses = classes.filter(c => c.studentId === currentStudent?.id);
+  const studentPayments = payments.filter(p => p.studentId === currentStudent?.id);
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Helper functions
+  const formatCardNumber = (value) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const parts = [];
+    for (let i = 0; i < v.length; i += 4) {
+      parts.push(v.substring(i, i + 4));
+    }
+    return parts.join(' ').substring(0, 19);
+  };
+
+  const formatExpiryDate = (value) => {
+    const v = value.replace(/\D/g, '');
+    if (v.length >= 2) {
+      return v.substring(0, 2) + '/' + v.substring(2, 4);
+    }
+    return v;
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const formatPhoneNumber = (value) => {
+    const phone = value.replace(/\D/g, '');
+    if (phone.length >= 6) {
+      return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6, 10)}`;
+    } else if (phone.length >= 3) {
+      return `(${phone.slice(0, 3)}) ${phone.slice(3)}`;
+    }
+    return phone;
+  };
+
+  const getStudentAge = (dateOfBirth) => {
+    if (!dateOfBirth) return '';
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      return age - 1;
+    }
+    return age;
+  };
+
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'missed': return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'upcoming': return <Clock className="w-4 h-4 text-blue-500" />;
+      default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'missed': return 'bg-red-100 text-red-800';
+      case 'upcoming': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Add history tracking functions
+  const addHistoryEntry = (studentId, type, description, details = {}) => {
+    const newEntry = {
+      id: Date.now(),
+      studentId,
+      type,
+      description,
+      details,
+      timestamp: new Date().toISOString(),
+      date: new Date().toLocaleDateString()
+    };
+    setStudentHistory(prev => [newEntry, ...prev]);
+  };
+
+  // Event handlers
+  const handleEditClass = (classItem) => {
+    setSelectedClass(classItem);
+    setShowEditClass(true);
+  };
+
+  const handleUpdateClass = (updatedClass) => {
+    const updatedClasses = classes.map(c => 
+      c.id === updatedClass.id ? updatedClass : c
+    );
+    setClasses(updatedClasses);
+    
+    addHistoryEntry(
+      updatedClass.studentId, 
+      'class_updated', 
+      `Class "${updatedClass.lesson}" status changed to ${updatedClass.status}`,
+      { oldStatus: classes.find(c => c.id === updatedClass.id)?.status, newStatus: updatedClass.status }
+    );
+    
+    setShowEditClass(false);
+    setSelectedClass(null);
+  };
+
+  const handleAddClass = () => {
+    if (newClass.lesson && currentStudent) {
+      const classToAdd = {
+        ...newClass,
+        id: Date.now(),
+        studentId: currentStudent.id
+      };
+      setClasses([...classes, classToAdd]);
+      
+      addHistoryEntry(
+        currentStudent.id,
+        'class_added',
+        `New class "${classToAdd.lesson}" scheduled for ${formatDate(classToAdd.date)} at ${classToAdd.time}`,
+        { instructor: classToAdd.instructor, duration: classToAdd.duration }
+      );
+      
+      setNewClass({
+        lesson: '',
+        instructor: 'Ms. Rodriguez',
+        date: new Date().toISOString().split('T')[0],
+        time: '15:00',
+        duration: '60 min',
+        status: 'upcoming',
+        notes: ''
+      });
+      setShowAddClass(false);
+    }
+  };
+
+  const handleEditProfile = () => {
+    setEditingStudent({...currentStudent});
+    setShowEditProfile(true);
+  };
+
+  const handleUpdateProfile = () => {
+    if (editingStudent.name && editingStudent.instrument && editingStudent.parentName) {
+      const updatedStudents = students.map(student => 
+        student.id === editingStudent.id ? editingStudent : student
+      );
+      setStudents(updatedStudents);
+      
+      addHistoryEntry(
+        editingStudent.id,
+        'profile_updated',
+        `Profile information updated for ${editingStudent.name}`,
+        { updatedFields: 'Contact info, personal details' }
+      );
+      
+      setShowEditProfile(false);
+      setEditingStudent(null);
+    }
+  };
+
+  const handleAddStudent = () => {
+    if (newStudent.name && newStudent.instrument && newStudent.parentName) {
+      const studentToAdd = {
+        ...newStudent,
+        id: Date.now(),
+        photo: instrumentEmojis[newStudent.instrument] || '🎵'
+      };
+      setStudents([...students, studentToAdd]);
+      
+      addHistoryEntry(
+        studentToAdd.id,
+        'student_added',
+        `New student ${studentToAdd.name} enrolled for ${studentToAdd.instrument} lessons`,
+        { level: studentToAdd.level, startDate: studentToAdd.startDate }
+      );
+      
+      setNewStudent({
+        name: '',
+        instrument: '',
+        level: 'Beginner',
+        parentName: '',
+        parentPhone: '',
+        parentEmail: '',
+        studentPhone: '',
+        address: '',
+        city: '',
+        zipCode: '',
+        emergencyContact: '',
+        emergencyPhone: '',
+        dateOfBirth: '',
+        medicalNotes: '',
+        startDate: new Date().toISOString().split('T')[0]
+      });
+      setShowAddStudent(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    setIsProcessingPayment(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const updatedPayments = payments.map(payment => 
+      payment.id === selectedPayment.id 
+        ? { ...payment, status: 'paid', paidDate: new Date().toISOString().split('T')[0] }
+        : payment
+    );
+    setPayments(updatedPayments);
+    
+    addHistoryEntry(
+      currentStudent.id,
+      'payment_made',
+      `Payment of $${selectedPayment.amount} completed for ${selectedPayment.description}`,
+      { amount: selectedPayment.amount, paymentMethod: 'Credit Card' }
+    );
+    
+    setPaymentData({
+      cardNumber: '',
+      expiryDate: '',
+      cvv: '',
+      cardholderName: '',
+      billingAddress: '',
+      city: '',
+      zipCode: ''
+    });
+    
+    setIsProcessingPayment(false);
+    setShowPaymentForm(false);
+    setSelectedPayment(null);
+  };
+
+  const handlePayNow = (payment) => {
+    setSelectedPayment(payment);
+    setShowPaymentForm(true);
+  };
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setPushEnabled(true);
+        const welcomeNotification = {
+          id: Date.now(),
+          type: 'system',
+          title: 'Notifications Enabled',
+          message: 'You will now receive updates about your child music lessons!',
+          studentId: currentStudent?.id || 1,
+          timestamp: new Date().toISOString(),
+          read: false,
+          icon: '🔔'
+        };
+        setNotifications(prev => [welcomeNotification, ...prev]);
+      }
+    }
+  };
+
+  const markAsRead = (notificationId) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      )
+    );
+  };
+
+  // Simulate push notifications
+  useEffect(() => {
+    if (pushEnabled) {
+      const interval = setInterval(() => {
+        if (Math.random() < 0.3) {
+          const messages = [
+            'Lesson reminder: Tomorrow at 3:00 PM',
+            'Payment due in 3 days',
+            'Great progress in todays lesson!'
+          ];
+          const icons = ['⏰', '💳', '🌟'];
+          const randomIndex = Math.floor(Math.random() * messages.length);
+          
+          const newNotification = {
+            id: Date.now(),
+            type: 'auto',
+            title: 'Music Academy Update',
+            message: messages[randomIndex],
+            studentId: currentStudent?.id || 1,
+            timestamp: new Date().toISOString(),
+            read: false,
+            icon: icons[randomIndex]
+          };
+          
+          setNotifications(prev => [newNotification, ...prev]);
+        }
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [pushEnabled, currentStudent]);
+
+  // Student history view
+  if (showStudentHistory) {
+    const currentStudentHistory = studentHistory.filter(entry => entry.studentId === currentStudent?.id);
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <h1 className="text-xl font-bold text-gray-800">Student History</h1>
+              </div>
+              <button 
+                onClick={() => setShowStudentHistory(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">{currentStudent?.name}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-4">Activity History</h3>
+            
+            {currentStudentHistory.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No history available</p>
+                <p className="text-xs text-gray-400 mt-1">Activities will appear here as they occur</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {currentStudentHistory.map((entry) => (
+                  <div key={entry.id} className="border-l-4 border-purple-200 pl-4 py-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-800 text-sm">
+                        {entry.type === 'student_added' && '👤 Student Enrolled'}
+                        {entry.type === 'class_updated' && '📚 Class Updated'}
+                        {entry.type === 'class_added' && '📅 Class Added'}
+                        {entry.type === 'profile_updated' && '✏️ Profile Updated'}
+                        {entry.type === 'payment_made' && '💳 Payment Made'}
+                      </h4>
+                      <span className="text-xs text-gray-400">{entry.date}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{entry.description}</p>
+                    {entry.details && Object.keys(entry.details).length > 0 && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                        {Object.entries(entry.details).map(([key, value]) => (
+                          <div key={key} className="flex justify-between">
+                            <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                            <span className="font-medium">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Edit profile view
+  if (showEditProfile && editingStudent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-gray-800">Edit Profile</h1>
+              <button 
+                onClick={() => {
+                  setShowEditProfile(false);
+                  setEditingStudent(null);
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">{editingStudent.name}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={editingStudent.name}
+                    onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
+                    placeholder="Enter student name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={editingStudent.dateOfBirth}
+                    onChange={(e) => setEditingStudent({...editingStudent, dateOfBirth: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Instrument *</label>
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={editingStudent.instrument}
+                    onChange={(e) => setEditingStudent({...editingStudent, instrument: e.target.value, photo: instrumentEmojis[e.target.value] || '🎵'})}
+                  >
+                    <option value="">Select instrument</option>
+                    {Object.keys(instrumentEmojis).map(instrument => (
+                      <option key={instrument} value={instrument}>
+                        {instrumentEmojis[instrument]} {instrument}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={editingStudent.level}
+                    onChange={(e) => setEditingStudent({...editingStudent, level: e.target.value})}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Student Phone</label>
+                <input
+                  type="tel"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={editingStudent.studentPhone}
+                  onChange={(e) => setEditingStudent({...editingStudent, studentPhone: formatPhoneNumber(e.target.value)})}
+                  placeholder="(555) 123-4567"
+                  maxLength="14"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={editingStudent.address}
+                  onChange={(e) => setEditingStudent({...editingStudent, address: e.target.value})}
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={editingStudent.city}
+                    onChange={(e) => setEditingStudent({...editingStudent, city: e.target.value})}
+                    placeholder="Springfield"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={editingStudent.zipCode}
+                    onChange={(e) => setEditingStudent({...editingStudent, zipCode: e.target.value.replace(/\D/g, '').substring(0, 5)})}
+                    placeholder="12345"
+                    maxLength="5"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Parent Information</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Parent Name *</label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={editingStudent.parentName}
+                      onChange={(e) => setEditingStudent({...editingStudent, parentName: e.target.value})}
+                      placeholder="Enter parent name"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Parent Phone *</label>
+                      <input
+                        type="tel"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                        value={editingStudent.parentPhone}
+                        onChange={(e) => setEditingStudent({...editingStudent, parentPhone: formatPhoneNumber(e.target.value)})}
+                        placeholder="(555) 123-4567"
+                        maxLength="14"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
+                      <input
+                        type="email"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                        value={editingStudent.parentEmail}
+                        onChange={(e) => setEditingStudent({...editingStudent, parentEmail: e.target.value})}
+                        placeholder="parent@email.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Emergency Contact</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Name</label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={editingStudent.emergencyContact}
+                      onChange={(e) => setEditingStudent({...editingStudent, emergencyContact: e.target.value})}
+                      placeholder="John Doe (Relationship)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
+                    <input
+                      type="tel"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={editingStudent.emergencyPhone}
+                      onChange={(e) => setEditingStudent({...editingStudent, emergencyPhone: formatPhoneNumber(e.target.value)})}
+                      placeholder="(555) 987-6543"
+                      maxLength="14"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Additional Information</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={editingStudent.startDate}
+                      onChange={(e) => setEditingStudent({...editingStudent, startDate: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Medical Notes</label>
+                    <textarea
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      rows="3"
+                      value={editingStudent.medicalNotes}
+                      onChange={(e) => setEditingStudent({...editingStudent, medicalNotes: e.target.value})}
+                      placeholder="Any allergies, medical conditions, or special needs (optional)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowEditProfile(false);
+                    setEditingStudent(null);
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateProfile}
+                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center"
+                  disabled={!editingStudent.name || !editingStudent.instrument || !editingStudent.parentName}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Add class view
+  if (showAddClass) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-gray-800">Add New Class</h1>
+              <button 
+                onClick={() => setShowAddClass(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">For {currentStudent?.name}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lesson Title *</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={newClass.lesson}
+                  onChange={(e) => setNewClass({...newClass, lesson: e.target.value})}
+                  placeholder="e.g., Piano Scales, Guitar Chords, Voice Training"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Instructor *</label>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={newClass.instructor}
+                  onChange={(e) => setNewClass({...newClass, instructor: e.target.value})}
+                >
+                  <option value="Ms. Rodriguez">Ms. Rodriguez</option>
+                  <option value="Mr. Thompson">Mr. Thompson</option>
+                  <option value="Ms. Johnson">Ms. Johnson</option>
+                  <option value="Mr. Davis">Mr. Davis</option>
+                  <option value="Dr. Williams">Dr. Williams</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newClass.date}
+                    onChange={(e) => setNewClass({...newClass, date: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+                  <input
+                    type="time"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newClass.time}
+                    onChange={(e) => setNewClass({...newClass, time: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={newClass.duration}
+                  onChange={(e) => setNewClass({...newClass, duration: e.target.value})}
+                >
+                  <option value="30 min">30 minutes</option>
+                  <option value="45 min">45 minutes</option>
+                  <option value="60 min">60 minutes</option>
+                  <option value="90 min">90 minutes</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={newClass.status}
+                  onChange={(e) => setNewClass({...newClass, status: e.target.value})}
+                >
+                  <option value="upcoming">Upcoming</option>
+                  <option value="completed">Completed</option>
+                  <option value="missed">Missed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {newClass.status === 'completed' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lesson Notes</label>
+                  <textarea
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    rows="3"
+                    value={newClass.notes}
+                    onChange={(e) => setNewClass({...newClass, notes: e.target.value})}
+                    placeholder="Add notes about the lesson (optional)"
+                  />
+                </div>
+              )}
+
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <h3 className="font-semibold text-blue-800 mb-2">Class Preview</h3>
+                <div className="text-sm text-blue-700">
+                  <p><strong>Student:</strong> {currentStudent?.name}</p>
+                  <p><strong>Lesson:</strong> {newClass.lesson || 'Enter lesson title'}</p>
+                  <p><strong>When:</strong> {formatDate(newClass.date)} at {newClass.time}</p>
+                  <p><strong>Duration:</strong> {newClass.duration}</p>
+                  <p><strong>Instructor:</strong> {newClass.instructor}</p>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setShowAddClass(false)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddClass}
+                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center"
+                  disabled={!newClass.lesson}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Class
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Edit class view
+  if (showEditClass && selectedClass) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-gray-800">Edit Class</h1>
+              <button 
+                onClick={() => {
+                  setShowEditClass(false);
+                  setSelectedClass(null);
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lesson Title</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={selectedClass.lesson}
+                  onChange={(e) => setSelectedClass({...selectedClass, lesson: e.target.value})}
+                  placeholder="Enter lesson title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Instructor</label>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={selectedClass.instructor}
+                  onChange={(e) => setSelectedClass({...selectedClass, instructor: e.target.value})}
+                >
+                  <option value="Ms. Rodriguez">Ms. Rodriguez</option>
+                  <option value="Mr. Thompson">Mr. Thompson</option>
+                  <option value="Ms. Johnson">Ms. Johnson</option>
+                  <option value="Mr. Davis">Mr. Davis</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={selectedClass.status}
+                  onChange={(e) => setSelectedClass({...selectedClass, status: e.target.value})}
+                >
+                  <option value="upcoming">Upcoming</option>
+                  <option value="completed">Completed</option>
+                  <option value="missed">Missed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {selectedClass.status === 'completed' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lesson Notes</label>
+                  <textarea
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    rows="3"
+                    value={selectedClass.notes || ''}
+                    onChange={(e) => setSelectedClass({...selectedClass, notes: e.target.value})}
+                    placeholder="Add notes about the lesson (optional)"
+                  />
+                </div>
+              )}
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowEditClass(false);
+                    setSelectedClass(null);
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleUpdateClass(selectedClass)}
+                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Update Class
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Notification view
+  if (showNotifications) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <BellRing className="w-6 h-6 text-purple-600" />
+                <h1 className="text-xl font-bold text-gray-800">Notifications</h1>
+                {unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+              <button 
+                onClick={() => setShowNotifications(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <h3 className="font-semibold text-gray-800 mb-3">Notification Settings</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-700">Push Notifications</p>
+                <p className="text-xs text-gray-500">Get updates about lessons and payments</p>
+              </div>
+              {!pushEnabled ? (
+                <button
+                  onClick={requestNotificationPermission}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700"
+                >
+                  Enable
+                </button>
+              ) : (
+                <span className="text-green-600 text-sm">✓ Enabled</span>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-4">Recent Updates</h3>
+            {notifications.length === 0 ? (
+              <div className="text-center py-8">
+                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No notifications yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`border rounded-lg p-3 cursor-pointer ${
+                      notification.read 
+                        ? 'border-gray-200 bg-white' 
+                        : 'border-purple-200 bg-purple-50'
+                    }`}
+                    onClick={() => markAsRead(notification.id)}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="text-2xl">{notification.icon}</div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-800 text-sm">{notification.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                        <p className="text-xs text-gray-400 mt-2">{formatTimestamp(notification.timestamp)}</p>
+                      </div>
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment form view
+  if (showPaymentForm && selectedPayment) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-gray-800">Payment</h1>
+              <button 
+                onClick={() => {
+                  setShowPaymentForm(false);
+                  setSelectedPayment(null);
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <h2 className="font-semibold text-gray-800 mb-3">Payment Summary</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">{selectedPayment.description}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Student:</span>
+                <span className="font-medium">{currentStudent?.name}</span>
+              </div>
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total:</span>
+                  <span className="text-purple-600">${selectedPayment.amount}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-4">Payment Information</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={paymentData.cardholderName}
+                  onChange={(e) => setPaymentData({...paymentData, cardholderName: e.target.value})}
+                  placeholder="John Doe"
+                  disabled={isProcessingPayment}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={paymentData.cardNumber}
+                  onChange={(e) => setPaymentData({...paymentData, cardNumber: formatCardNumber(e.target.value)})}
+                  placeholder="1234 5678 9012 3456"
+                  maxLength="19"
+                  disabled={isProcessingPayment}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={paymentData.expiryDate}
+                    onChange={(e) => setPaymentData({...paymentData, expiryDate: formatExpiryDate(e.target.value)})}
+                    placeholder="MM/YY"
+                    maxLength="5"
+                    disabled={isProcessingPayment}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={paymentData.cvv}
+                    onChange={(e) => setPaymentData({...paymentData, cvv: e.target.value.replace(/\D/g, '').substring(0, 4)})}
+                    placeholder="123"
+                    maxLength="4"
+                    disabled={isProcessingPayment}
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowPaymentForm(false);
+                    setSelectedPayment(null);
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300"
+                  disabled={isProcessingPayment}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePayment}
+                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center disabled:opacity-50"
+                  disabled={isProcessingPayment || !paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName}
+                >
+                  {isProcessingPayment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Pay ${selectedPayment.amount}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-green-50 rounded-lg">
+              <p className="text-xs text-green-700">
+                🔒 Your payment information is encrypted and secure
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Add student view
+  if (showAddStudent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-gray-800">Add New Student</h1>
+              <button 
+                onClick={() => setShowAddStudent(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newStudent.name}
+                    onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
+                    placeholder="Enter student name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newStudent.dateOfBirth}
+                    onChange={(e) => setNewStudent({...newStudent, dateOfBirth: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Instrument *</label>
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newStudent.instrument}
+                    onChange={(e) => setNewStudent({...newStudent, instrument: e.target.value})}
+                  >
+                    <option value="">Select instrument</option>
+                    {Object.keys(instrumentEmojis).map(instrument => (
+                      <option key={instrument} value={instrument}>
+                        {instrumentEmojis[instrument]} {instrument}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newStudent.level}
+                    onChange={(e) => setNewStudent({...newStudent, level: e.target.value})}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Student Phone</label>
+                <input
+                  type="tel"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={newStudent.studentPhone}
+                  onChange={(e) => setNewStudent({...newStudent, studentPhone: formatPhoneNumber(e.target.value)})}
+                  placeholder="(555) 123-4567"
+                  maxLength="14"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                  value={newStudent.address}
+                  onChange={(e) => setNewStudent({...newStudent, address: e.target.value})}
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newStudent.city}
+                    onChange={(e) => setNewStudent({...newStudent, city: e.target.value})}
+                    placeholder="Springfield"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    value={newStudent.zipCode}
+                    onChange={(e) => setNewStudent({...newStudent, zipCode: e.target.value.replace(/\D/g, '').substring(0, 5)})}
+                    placeholder="12345"
+                    maxLength="5"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Parent Information</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Parent Name *</label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={newStudent.parentName}
+                      onChange={(e) => setNewStudent({...newStudent, parentName: e.target.value})}
+                      placeholder="Enter parent name"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Parent Phone *</label>
+                      <input
+                        type="tel"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                        value={newStudent.parentPhone}
+                        onChange={(e) => setNewStudent({...newStudent, parentPhone: formatPhoneNumber(e.target.value)})}
+                        placeholder="(555) 123-4567"
+                        maxLength="14"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
+                      <input
+                        type="email"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                        value={newStudent.parentEmail}
+                        onChange={(e) => setNewStudent({...newStudent, parentEmail: e.target.value})}
+                        placeholder="parent@email.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Emergency Contact</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Name</label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={newStudent.emergencyContact}
+                      onChange={(e) => setNewStudent({...newStudent, emergencyContact: e.target.value})}
+                      placeholder="John Doe (Relationship)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
+                    <input
+                      type="tel"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={newStudent.emergencyPhone}
+                      onChange={(e) => setNewStudent({...newStudent, emergencyPhone: formatPhoneNumber(e.target.value)})}
+                      placeholder="(555) 987-6543"
+                      maxLength="14"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Additional Information</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      value={newStudent.startDate}
+                      onChange={(e) => setNewStudent({...newStudent, startDate: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Medical Notes</label>
+                    <textarea
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      rows="3"
+                      value={newStudent.medicalNotes}
+                      onChange={(e) => setNewStudent({...newStudent, medicalNotes: e.target.value})}
+                      placeholder="Any allergies, medical conditions, or special needs (optional)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setShowAddStudent(false)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddStudent}
+                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center"
+                  disabled={!newStudent.name || !newStudent.instrument || !newStudent.parentName}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Add Student
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main app view
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+      <div className="max-w-md mx-auto">
+        <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Music className="w-6 h-6 text-purple-600" />
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Music Academy</h1>
+                <p className="text-xs text-gray-600">Parent Portal</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => setShowNotifications(true)}
+                className="relative bg-purple-100 text-purple-600 p-2 rounded-lg hover:bg-purple-200"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              <button 
+                onClick={() => setShowAddStudent(true)}
+                className="bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+          <select 
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+            value={selectedStudent}
+            onChange={(e) => setSelectedStudent(parseInt(e.target.value))}
+          >
+            {students.map((student, index) => (
+              <option key={student.id} value={index}>
+                {student.photo} {student.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {currentStudent && (
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="text-3xl">{currentStudent.photo}</div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-800">{currentStudent.name}</h2>
+                <p className="text-sm text-gray-600">{currentStudent.instrument} • {currentStudent.level}</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <User className="w-3 h-3 text-gray-400" />
+                  <p className="text-xs text-gray-500">{currentStudent.parentName}</p>
+                  {currentStudent.dateOfBirth && (
+                    <p className="text-xs text-gray-500">• Age {getStudentAge(currentStudent.dateOfBirth)}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col space-y-1">
+                <button 
+                  onClick={() => setShowStudentHistory(true)}
+                  className="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors"
+                >
+                  📋 History
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white rounded-xl shadow-lg mb-4">
+          <div className="flex">
+            <button
+              className={`flex-1 px-4 py-3 text-center font-medium rounded-l-xl ${
+                currentView === 'calendar' 
+                ? 'text-purple-600 bg-purple-50' 
+                : 'text-gray-600'
+              }`}
+              onClick={() => setCurrentView('calendar')}
+            >
+              <Calendar className="w-4 h-4 mx-auto mb-1" />
+              <span className="text-xs">Classes</span>
+            </button>
+            <button
+              className={`flex-1 px-4 py-3 text-center font-medium ${
+                currentView === 'payments' 
+                ? 'text-purple-600 bg-purple-50' 
+                : 'text-gray-600'
+              }`}
+              onClick={() => setCurrentView('payments')}
+            >
+              <DollarSign className="w-4 h-4 mx-auto mb-1" />
+              <span className="text-xs">Payments</span>
+            </button>
+            <button
+              className={`flex-1 px-4 py-3 text-center font-medium rounded-r-xl ${
+                currentView === 'profile' 
+                ? 'text-purple-600 bg-purple-50' 
+                : 'text-gray-600'
+              }`}
+              onClick={() => setCurrentView('profile')}
+            >
+              <User className="w-4 h-4 mx-auto mb-1" />
+              <span className="text-xs">Profile</span>
+            </button>
+          </div>
+
+          {currentView === 'calendar' && (
+            <div className="p-4 border-t">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-800">Classes</h3>
+                <button
+                  onClick={() => setShowAddClass(true)}
+                  className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-green-700 flex items-center"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Class
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {studentClasses.map((classItem) => (
+                  <div key={classItem.id} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-2 flex-1">
+                        {getStatusIcon(classItem.status)}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-gray-800 text-sm">{classItem.lesson}</h3>
+                          <p className="text-xs text-gray-600">{classItem.instructor}</p>
+                          <p className="text-xs text-gray-500">{formatDate(classItem.date)} • {classItem.time}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(classItem.status)}`}>
+                          {classItem.status}
+                        </span>
+                        <button
+                          onClick={() => handleEditClass(classItem)}
+                          className="p-1 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    </div>
+                    {classItem.notes && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <p className="text-xs text-green-600">📝 {classItem.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="bg-green-50 rounded-lg p-2 text-center">
+                  <div className="text-lg font-bold text-green-600">
+                    {studentClasses.filter(c => c.status === 'completed').length}
+                  </div>
+                  <div className="text-xs text-green-700">Completed</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-2 text-center">
+                  <div className="text-lg font-bold text-blue-600">
+                    {studentClasses.filter(c => c.status === 'upcoming').length}
+                  </div>
+                  <div className="text-xs text-blue-700">Upcoming</div>
+                </div>
+                <div className="bg-red-50 rounded-lg p-2 text-center">
+                  <div className="text-lg font-bold text-red-600">
+                    {studentClasses.filter(c => c.status === 'missed').length}
+                  </div>
+                  <div className="text-xs text-red-700">Missed</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentView === 'payments' && (
+            <div className="p-4 border-t">
+              <div className="space-y-3">
+                {studentPayments.map((payment) => (
+                  <div key={payment.id} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-800 text-sm">{payment.description}</h3>
+                        <p className="text-xs text-gray-600">Due: {formatDate(payment.dueDate)}</p>
+                        {payment.paidDate && (
+                          <p className="text-xs text-green-600">Paid: {formatDate(payment.paidDate)}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-800">${payment.amount}</p>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          payment.status === 'paid' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {payment.status === 'paid' ? 'Paid' : 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                    {payment.status === 'pending' && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <button 
+                          onClick={() => handlePayNow(payment)}
+                          className="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-purple-700"
+                        >
+                          Pay Now
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 bg-gray-50 rounded-lg p-3">
+                <h3 className="font-medium text-gray-800 mb-2 text-sm">Payment Summary</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-600">Total Pending</p>
+                    <p className="text-lg font-bold text-red-600">
+                      ${studentPayments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Paid This Month</p>
+                    <p className="text-lg font-bold text-green-600">
+                      ${studentPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentView === 'profile' && (
+            <div className="p-4 border-t">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-800">Profile Information</h3>
+                <button
+                  onClick={handleEditProfile}
+                  className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center"
+                >
+                  <User className="w-3 h-3 mr-1" />
+                  Edit Profile
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h3 className="font-semibold text-gray-800 mb-3">Student Information</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-600">Full Name:</span>
+                      <p className="font-medium">{currentStudent.name}</p>
+                    </div>
+                    {currentStudent.dateOfBirth && (
+                      <div>
+                        <span className="text-gray-600">Age:</span>
+                        <p className="font-medium">{getStudentAge(currentStudent.dateOfBirth)} years old</p>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-gray-600">Instrument:</span>
+                      <p className="font-medium">{currentStudent.instrument}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Level:</span>
+                      <p className="font-medium">{currentStudent.level}</p>
+                    </div>
+                    {currentStudent.startDate && (
+                      <div>
+                        <span className="text-gray-600">Start Date:</span>
+                        <p className="font-medium">{formatDate(currentStudent.startDate)}</p>
+                      </div>
+                    )}
+                    {currentStudent.studentPhone && (
+                      <div>
+                        <span className="text-gray-600">Student Phone:</span>
+                        <p className="font-medium">{currentStudent.studentPhone}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {currentStudent.address && (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <h3 className="font-semibold text-gray-800 mb-3">Address</h3>
+                    <div className="text-sm">
+                      <p className="font-medium">{currentStudent.address}</p>
+                      <p className="text-gray-600">{currentStudent.city}, {currentStudent.zipCode}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h3 className="font-semibold text-gray-800 mb-3">Parent Information</h3>
+                  <div className="grid grid-cols-1 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-600">Parent Name:</span>
+                      <p className="font-medium">{currentStudent.parentName}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Phone:</span>
+                      <p className="font-medium">{currentStudent.parentPhone}</p>
+                    </div>
+                    {currentStudent.parentEmail && (
+                      <div>
+                        <span className="text-gray-600">Email:</span>
+                        <p className="font-medium">{currentStudent.parentEmail}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {currentStudent.emergencyContact && (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <h3 className="font-semibold text-gray-800 mb-3">Emergency Contact</h3>
+                    <div className="text-sm">
+                      <div>
+                        <span className="text-gray-600">Contact:</span>
+                        <p className="font-medium">{currentStudent.emergencyContact}</p>
+                      </div>
+                      {currentStudent.emergencyPhone && (
+                        <div className="mt-1">
+                          <span className="text-gray-600">Phone:</span>
+                          <p className="font-medium">{currentStudent.emergencyPhone}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {currentStudent.medicalNotes && (
+                  <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                    <h3 className="font-semibold text-yellow-800 mb-2">Medical Notes</h3>
+                    <p className="text-sm text-yellow-700">{currentStudent.medicalNotes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MobileMusicAcademyApp;
