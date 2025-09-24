@@ -1870,3 +1870,22 @@ const MobileMusicAcademyApp = () => {
 };
 
 export default MobileMusicAcademyApp;
+# Clone your existing repo
+git clone https://github.com/pfpinzon/musicacademy.git
+cd musicacademy
+
+# Create React app structure (this will merge with existing files)
+npx create-react-app .
+npm install lucide-react
+
+# Replace src/App.js with your Music Academy code
+# (Copy the entire artifact code and paste it into src/App.js)
+
+# Make sure the imports at the top of App.js are:
+# import React, { useState, useEffect } from 'react';
+# import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, DollarSign, User, Music, Plus, Save, X, Bell, BellRing } from 'lucide-react';
+
+# Add and commit all files
+git add .
+git commit -m "feat: Add complete Music Academy React app with payment system and student management"
+git push origin main
